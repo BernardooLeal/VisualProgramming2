@@ -117,39 +117,11 @@ public class LogInMenu extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void jbtnLoginActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jbtnLoginActionPerformed
-        // TODO add your handling code here:
-        try{
-            BufferedReader input = new BufferedReader(new FileReader("src/main/java/com/mycompany/musiccomposer/passwords.txt"));
-            String senha = null; // senha means password in portuguese
-            String line = input.readLine();
-            while(line != null){
-                StringTokenizer st = new StringTokenizer(line); //break up a string into tokens
-                if (jtxtUsername.getText().equals(st.nextToken())){
-                    senha = st.nextToken(); //extracts individual tokens
-                }
-                line = input.readLine();
-            }
-            input.close();
-            MessageDigest md = MessageDigest.getInstance("SHA-256"); // Found on google that SHA-256 was a good hash encryption and md create a hash
-            md.update(new String(jPfPassword.getPassword()).getBytes()); // converts to bytes
-            byte byteData[] = md.digest(); // digest computes the hash
-            StringBuffer sb = new StringBuffer(); // mutable string
-            for(int i = 0; i < byteData.length; i++) {
-                sb.append(Integer.toString((byteData[i] & 0xFF) + 0x100, 16).substring(1)); // convert byte array in hexadecimal. This whole encryption I had to google about it
-            }
-            if(senha.equals(sb.toString())) {
-                //new PasswordManager(jtxtUsername.getText()).setVisible(true);
-                //this.dispose();
-                MainPage homeScreen = new MainPage(jtxtUsername.getText());
-                homeScreen.setVisible(true);
-                this.dispose();
-            }
-        } catch(FileNotFoundException smt) {
-            System.out.println("erro12");
-        } catch(IOException smt) {
-            System.out.println("erro22");
-        } catch(NoSuchAlgorithmException smt) {
-            System.out.println("erro32");
+        if(AuthenticationSingleton.getInstance().login(jtxtUsername.getText(), jPfPassword.getPassword(), this)) {
+        // Login successful
+        MainPage homeScreen = new MainPage(jtxtUsername.getText());
+        homeScreen.setVisible(true);
+        this.dispose();
         }
     }//GEN-LAST:event_jbtnLoginActionPerformed
 

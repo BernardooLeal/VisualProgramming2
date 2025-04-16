@@ -153,53 +153,13 @@ public class RegisterPage extends javax.swing.JFrame {
     }//GEN-LAST:event_jBtnBackActionPerformed
 
     private void jBtnRegisterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBtnRegisterActionPerformed
-        // TODO add your handling code here:
-        if(jPfPassword.getPassword().length > 0 && jtxtUsername.getText().length() > 0){
-            String senha = new String(jPfPassword.getPassword());
-            String confirm = new String(jPfConfirm.getPassword());
-            if(senha.equals(confirm)) {
-                try {
-                    BufferedReader input = new BufferedReader(new FileReader("src/main/java/com/mycompany/musiccomposer/passwords.txt"));
-                    String line  = input.readLine();
-                    while(line != null){
-                        StringTokenizer st = new StringTokenizer(line); // pesquisar essa poga tmb
-                        if(jtxtUsername.getText().equals(st.nextToken())) {
-                            JOptionPane.showMessageDialog(null, "User already Exists", "Error", JOptionPane.ERROR_MESSAGE);
-                            return;
-                        }
-                        line = input.readLine();
-                    }
-                    input.close();
-                    MessageDigest md = MessageDigest.getInstance("SHA-256"); // pegar link e api do bgl aq
-                    md.update(senha.getBytes());
-                    byte byteData[] = md.digest();
-                    StringBuffer sb = new StringBuffer(); // pesquisar dps oq essas pohas fazem
-                    for(int i = 0; i < byteData.length; i++) {
-                        sb.append(Integer.toString((byteData[i] & 0xFF) + 0x100, 16).substring(1)); // perguntar q poha isso faz dps
-                    }
-                    BufferedWriter output = new BufferedWriter(new FileWriter("src/main/java/com/mycompany/musiccomposer/passwords.txt", true));
-                    output.write(jtxtUsername.getText()+ " " + sb.toString()+"\n");
-                    output.close();
-                    new LogInMenu().setVisible(true);
-                    this.dispose();
-                } catch(FileNotFoundException smt) {
-                    smt.printStackTrace();
-                    System.out.println("erro1");
-                } catch(IOException smt) {
-                    smt.printStackTrace();
-                    System.out.println("erro2");
-                } catch(NoSuchAlgorithmException smt) {
-                    smt.printStackTrace();
-                    System.out.println("erro3");// ver oq eh isso
-                } catch(NoSuchElementException smt) {
-                    smt.printStackTrace();
-                    System.out.println("erro4");
-                }
-            } else {
-                JOptionPane.showMessageDialog(null, "The password is not the same", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        } else {
-            JOptionPane.showMessageDialog(null, "Fill with info", "Error", JOptionPane.ERROR_MESSAGE);
+        if(AuthenticationSingleton.getInstance().register(
+            jtxtUsername.getText(), 
+            jPfPassword.getPassword(), 
+            jPfConfirm.getPassword(), 
+            this)) {
+        new LogInMenu().setVisible(true);
+        this.dispose();
         }
     }//GEN-LAST:event_jBtnRegisterActionPerformed
 

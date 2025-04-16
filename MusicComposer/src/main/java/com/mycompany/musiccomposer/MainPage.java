@@ -5,7 +5,7 @@
 package com.mycompany.musiccomposer;
 
 import java.util.List;
-import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
 
 
 
@@ -21,16 +21,111 @@ public class MainPage extends javax.swing.JFrame {
     //private JTextArea jTxtAChords;
     
     public MainPage(String username) {
-        playerSingleton = MusicSingleton.getInstance();
-        playerSingleton.setMainPage(this);
         initComponents();
         this.loggedInUser = username;
         jlblAccountName.setText(username);
+        playerSingleton = MusicSingleton.getInstance();
+        playerSingleton.setMainPage(this);
+        instrumentSelection(playerSingleton.getInstrument());
+        playbackControlsState(MusicSingleton.STATUS_IDLE);
     }
     
     public void updateTextArea(String text) {
     jTxtAChords.setText(text);
     }
+    
+    private void instrumentSelection(String instrument) {
+        switch(instrument) {
+            case "Piano":
+                jRBtnPiano.setSelected(true);
+                break;
+            case "Guitar":
+                jRBtnGuitar.setSelected(true);
+                break;
+            case "Violin":
+                jRBtnViolin.setSelected(true);
+                break;
+            case "Flute":
+                jRBtnFlute.setSelected(true);
+                break;
+            case "Trumpet":
+                jRBtnTrumpet.setSelected(true);
+                break;
+            default:
+                jRBtnPiano.setSelected(true);
+                break;
+        }
+    }
+    
+    public void playbackControlsState(String status) {
+        SwingUtilities.invokeLater(() -> {
+            // I got the idea to use switch from chat tbh. 
+            if (jLblPlayback != null) {
+                jLblPlayback.setText("Status: " + status);
+            }
+            
+            switch (status) {
+                case MusicSingleton.STATUS_PLAYING:
+                    jBtnPlay.setEnabled(false);
+                    jBtnPause.setEnabled(true);
+                    jBtnResume.setEnabled(false);
+                    jBtnStop.setEnabled(true);
+                    break;
+                case MusicSingleton.STATUS_PAUSED:
+                    jBtnPlay.setEnabled(false);
+                    jBtnPause.setEnabled(false);
+                    jBtnResume.setEnabled(true);
+                    jBtnStop.setEnabled(true);
+                    break;
+                case MusicSingleton.STATUS_IDLE:
+                    jBtnPlay.setEnabled(true);
+                    jBtnPause.setEnabled(false);
+                    jBtnResume.setEnabled(false);
+                    jBtnStop.setEnabled(false);
+                    break;
+            }
+        });
+    }
+    
+    public void highlightCurrentChord(int index) { //I used GPT help for the visual indicator stuff on each chord and the SwingUtilities
+        SwingUtilities.invokeLater(() -> {
+            try {
+                List<String> chords = MusicSingleton.getInstance().getRecordedChords();
+                if (index >= 0 && index < chords.size()) {
+                    // Clear text
+                    jTxtAChords.setText("");
+                    
+                    // Rebuild text with highlighting
+                    StringBuilder displayText = new StringBuilder();
+                    for (int i = 0; i < chords.size(); i++) {
+                        if (i == index) {
+                            // Add visual indicator for current chord
+                            displayText.append("▶ ").append(chords.get(i)).append(" ◀");
+                        } else {
+                            displayText.append(chords.get(i));
+                        }
+                        
+                        // space between chords
+                        if (i < chords.size() - 1) {
+                            displayText.append(" ");
+                        }
+                    }
+                    
+                    jTxtAChords.setText(displayText.toString());
+                }
+            } catch (Exception e) {
+                System.err.println("Error highlighting chord: " + e.getMessage());
+            }
+        });
+    }
+    
+    public void clearChordHighlight() {
+        SwingUtilities.invokeLater(() -> {
+            List<String> chords = MusicSingleton.getInstance().getRecordedChords();
+            updateTextArea(String.join(" ", chords));
+        });
+    }
+
     
 
     /**
@@ -42,6 +137,7 @@ public class MainPage extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        buttonGroup1 = new javax.swing.ButtonGroup();
         jLabel1 = new javax.swing.JLabel();
         jlblAccountName = new javax.swing.JLabel();
         jBtnOut = new javax.swing.JButton();
@@ -51,7 +147,7 @@ public class MainPage extends javax.swing.JFrame {
         jBtnCaug = new javax.swing.JButton();
         jBtnCsus2 = new javax.swing.JButton();
         jBtnCsus4 = new javax.swing.JButton();
-        jBtnListen = new javax.swing.JButton();
+        jBtnPlay = new javax.swing.JButton();
         jTBtnRecord = new javax.swing.JToggleButton();
         jBtnTempo = new javax.swing.JButton();
         jBtnSave = new javax.swing.JButton();
@@ -65,6 +161,11 @@ public class MainPage extends javax.swing.JFrame {
         jRBtnViolin = new javax.swing.JRadioButton();
         jRBtnFlute = new javax.swing.JRadioButton();
         jRBtnTrumpet = new javax.swing.JRadioButton();
+        jBtnPause = new javax.swing.JButton();
+        jBtnResume = new javax.swing.JButton();
+        jBtnStop = new javax.swing.JButton();
+        jBtnImport = new javax.swing.JButton();
+        jLblPlayback = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -123,10 +224,10 @@ public class MainPage extends javax.swing.JFrame {
             }
         });
 
-        jBtnListen.setText("▶ Listen");
-        jBtnListen.addActionListener(new java.awt.event.ActionListener() {
+        jBtnPlay.setText("▶ Play");
+        jBtnPlay.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jBtnListenActionPerformed(evt);
+                jBtnPlayActionPerformed(evt);
             }
         });
 
@@ -145,6 +246,11 @@ public class MainPage extends javax.swing.JFrame {
         });
 
         jBtnSave.setText("💾 Save");
+        jBtnSave.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jBtnSaveActionPerformed(evt);
+            }
+        });
 
         jLabel2.setFont(new java.awt.Font("Krungthep", 0, 13)); // NOI18N
         jLabel2.setText("Chord Player");
@@ -153,6 +259,7 @@ public class MainPage extends javax.swing.JFrame {
         jTxtAChords.setRows(5);
         jScrollPane1.setViewportView(jTxtAChords);
 
+        buttonGroup1.add(jRBtnPiano);
         jRBtnPiano.setText("Piano");
         jRBtnPiano.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -160,6 +267,7 @@ public class MainPage extends javax.swing.JFrame {
             }
         });
 
+        buttonGroup1.add(jRBtnGuitar);
         jRBtnGuitar.setText("Guitar");
         jRBtnGuitar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -167,6 +275,7 @@ public class MainPage extends javax.swing.JFrame {
             }
         });
 
+        buttonGroup1.add(jRBtnViolin);
         jRBtnViolin.setText("Violin");
         jRBtnViolin.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -174,6 +283,7 @@ public class MainPage extends javax.swing.JFrame {
             }
         });
 
+        buttonGroup1.add(jRBtnFlute);
         jRBtnFlute.setText("Flute");
         jRBtnFlute.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -181,12 +291,43 @@ public class MainPage extends javax.swing.JFrame {
             }
         });
 
+        buttonGroup1.add(jRBtnTrumpet);
         jRBtnTrumpet.setText("Trumpet");
         jRBtnTrumpet.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jRBtnTrumpetActionPerformed(evt);
             }
         });
+
+        jBtnPause.setText("⏸ Pause");
+        jBtnPause.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jBtnPauseActionPerformed(evt);
+            }
+        });
+
+        jBtnResume.setText("⏯ Resume");
+        jBtnResume.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jBtnResumeActionPerformed(evt);
+            }
+        });
+
+        jBtnStop.setText("⏹ Stop");
+        jBtnStop.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jBtnStopActionPerformed(evt);
+            }
+        });
+
+        jBtnImport.setText("Import");
+        jBtnImport.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jBtnImportActionPerformed(evt);
+            }
+        });
+
+        jLblPlayback.setText("Playback Status");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -195,56 +336,70 @@ public class MainPage extends javax.swing.JFrame {
             .addComponent(jSeparator1)
             .addComponent(jSeparator2)
             .addGroup(layout.createSequentialGroup()
-                .addGap(191, 191, 191)
-                .addComponent(jLabel2)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jTBtnRecord)
-                .addGap(44, 44, 44)
-                .addComponent(jBtnSave)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jBtnListen)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
-                        .addComponent(jScrollPane1)
-                        .addContainerGap())
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
-                        .addComponent(jBtnCmaj)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jBtnCmin)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jBtnCdim)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jBtnCaug)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jBtnCsus2)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jBtnCsus4)
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, layout.createSequentialGroup()
-                        .addComponent(jLabel1)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jlblAccountName, javax.swing.GroupLayout.PREFERRED_SIZE, 76, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jBtnOut)
-                        .addGap(32, 32, 32))
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jRBtnPiano)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jRBtnGuitar)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jRBtnViolin)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jRBtnFlute)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jRBtnTrumpet)
+                        .addContainerGap()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jLabel1)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jlblAccountName, javax.swing.GroupLayout.PREFERRED_SIZE, 76, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(jBtnOut))
+                            .addComponent(jScrollPane1)
+                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                .addComponent(jRBtnPiano)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(jRBtnGuitar)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jRBtnViolin)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jRBtnFlute)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jRBtnTrumpet)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(jBtnTempo))))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addGap(47, 47, 47)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jBtnSave)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jBtnImport, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jTBtnRecord, javax.swing.GroupLayout.PREFERRED_SIZE, 163, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jBtnTempo)
-                        .addGap(26, 26, 26))))
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jBtnPause, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jBtnPlay, javax.swing.GroupLayout.PREFERRED_SIZE, 78, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jBtnResume, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jBtnStop, javax.swing.GroupLayout.PREFERRED_SIZE, 93, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(28, 28, 28))
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(185, 185, 185)
+                                .addComponent(jLabel2))
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(jBtnCmaj)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jBtnCmin)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jBtnCdim)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jBtnCaug)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jBtnCsus2)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jBtnCsus4)))
+                        .addGap(0, 0, Short.MAX_VALUE)))
+                .addContainerGap())
+            .addGroup(layout.createSequentialGroup()
+                .addGap(187, 187, 187)
+                .addComponent(jLblPlayback)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -268,12 +423,25 @@ public class MainPage extends javax.swing.JFrame {
                     .addComponent(jBtnCsus4))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jTBtnRecord)
-                    .addComponent(jBtnSave)
-                    .addComponent(jBtnListen))
+                .addGap(0, 8, Short.MAX_VALUE)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jBtnSave)
+                            .addComponent(jBtnImport))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jTBtnRecord))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jBtnPlay)
+                            .addComponent(jBtnResume))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jBtnStop)
+                            .addComponent(jBtnPause))))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jLblPlayback)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 49, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -285,7 +453,7 @@ public class MainPage extends javax.swing.JFrame {
                     .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                         .addComponent(jRBtnPiano)
                         .addComponent(jRBtnGuitar)))
-                .addContainerGap(14, Short.MAX_VALUE))
+                .addGap(7, 7, 7))
         );
 
         pack();
@@ -297,9 +465,10 @@ public class MainPage extends javax.swing.JFrame {
         this.dispose();
     }//GEN-LAST:event_jBtnOutActionPerformed
 
-    private void jBtnListenActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBtnListenActionPerformed
+    private void jBtnPlayActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBtnPlayActionPerformed
        playerSingleton.playRecordedChords();
-    }//GEN-LAST:event_jBtnListenActionPerformed
+       playbackControlsState(MusicSingleton.STATUS_PLAYING);
+    }//GEN-LAST:event_jBtnPlayActionPerformed
 
     private void jBtnCmajActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBtnCmajActionPerformed
         playerSingleton.playChord("Cmaj");
@@ -327,10 +496,15 @@ public class MainPage extends javax.swing.JFrame {
 
     private void jTBtnRecordActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTBtnRecordActionPerformed
        playerSingleton.startRecording();
+       if (playerSingleton.isRecording()) {
+           jTBtnRecord.setText("🛑 Stop Recording");
+       } else {
+           jTBtnRecord.setText("🎤 Record (ON/OFF)");
+       }
     }//GEN-LAST:event_jTBtnRecordActionPerformed
 
     private void jBtnTempoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBtnTempoActionPerformed
-        playerSingleton.setTempo(120);
+        playerSingleton.setTempo(playerSingleton.getTempo());
     }//GEN-LAST:event_jBtnTempoActionPerformed
 
     private void jRBtnPianoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRBtnPianoActionPerformed
@@ -352,6 +526,32 @@ public class MainPage extends javax.swing.JFrame {
     private void jRBtnTrumpetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRBtnTrumpetActionPerformed
         playerSingleton.setInstrument("Trumpet");
     }//GEN-LAST:event_jRBtnTrumpetActionPerformed
+
+    private void jBtnSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBtnSaveActionPerformed
+       String composition = jTxtAChords.getText();
+       playerSingleton.saveComposition(composition);
+        
+    }//GEN-LAST:event_jBtnSaveActionPerformed
+
+    private void jBtnResumeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBtnResumeActionPerformed
+        playerSingleton.resumePlayback();
+        playbackControlsState(MusicSingleton.STATUS_PLAYING);
+    }//GEN-LAST:event_jBtnResumeActionPerformed
+
+    private void jBtnPauseActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBtnPauseActionPerformed
+        playerSingleton.pausePlayback();
+        playbackControlsState(MusicSingleton.STATUS_PAUSED);
+    }//GEN-LAST:event_jBtnPauseActionPerformed
+
+    private void jBtnStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBtnStopActionPerformed
+        playerSingleton.stopPlayback();
+        playbackControlsState(MusicSingleton.STATUS_IDLE);
+        clearChordHighlight();
+    }//GEN-LAST:event_jBtnStopActionPerformed
+
+    private void jBtnImportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBtnImportActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jBtnImportActionPerformed
 
     /**
      * @param args the command line arguments
@@ -390,18 +590,24 @@ public class MainPage extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.JButton jBtnCaug;
     private javax.swing.JButton jBtnCdim;
     private javax.swing.JButton jBtnCmaj;
     private javax.swing.JButton jBtnCmin;
     private javax.swing.JButton jBtnCsus2;
     private javax.swing.JButton jBtnCsus4;
-    private javax.swing.JButton jBtnListen;
+    private javax.swing.JButton jBtnImport;
     private javax.swing.JButton jBtnOut;
+    private javax.swing.JButton jBtnPause;
+    private javax.swing.JButton jBtnPlay;
+    private javax.swing.JButton jBtnResume;
     private javax.swing.JButton jBtnSave;
+    private javax.swing.JButton jBtnStop;
     private javax.swing.JButton jBtnTempo;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLblPlayback;
     private javax.swing.JRadioButton jRBtnFlute;
     private javax.swing.JRadioButton jRBtnGuitar;
     private javax.swing.JRadioButton jRBtnPiano;
