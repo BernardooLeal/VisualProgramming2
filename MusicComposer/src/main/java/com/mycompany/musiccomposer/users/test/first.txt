@@ -1,0 +1,5 @@
+# Music Composition
+# Instrument: Piano
+# Tempo: 120
+
+Cmaj ➡ Cmin ➡ Cdim ➡ Caug ➡ Csus2

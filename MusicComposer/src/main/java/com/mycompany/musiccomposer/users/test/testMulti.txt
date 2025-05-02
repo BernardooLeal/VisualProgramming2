@@ -1,0 +1,13 @@
+# Music Composition
+# Tempo: 120
+
+# Track: Track 1
+# Instrument: Flute
+# Muted: false
+Csus2 ➡ Cdim ➡ Cmin ➡ Cmaj
+
+# Track: algo
+# Instrument: Trumpet
+# Muted: false
+Caug ➡ Cdim ➡ Cmin
+

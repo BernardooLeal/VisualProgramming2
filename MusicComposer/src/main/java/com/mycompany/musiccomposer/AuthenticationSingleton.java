@@ -6,6 +6,7 @@ package com.mycompany.musiccomposer;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -27,6 +28,7 @@ public class AuthenticationSingleton {
     private boolean isLoggedIn;
     //I asked chat for the path and he helped me remembering to use static final. I kept the var name he gave tho
     private static final String PASSWORD_FILE = "src/main/java/com/mycompany/musiccomposer/passwords.txt";
+    private static final String USER_PATH = "src/main/java/com/mycompany/musiccomposer/users/";
     
     private AuthenticationSingleton() {
         this.currentUser = "";
@@ -74,6 +76,112 @@ public class AuthenticationSingleton {
         }
     }
     
+    public String getCurrentUserFolderPath() {
+        if (!isLoggedIn || currentUser.isEmpty()) {
+            return null;
+        }
+        return getUserFolderPath(currentUser);
+    }
+    
+    public String getUserFolderPath(String username) {
+        return USER_PATH + username + "/";
+    }
+    
+    public boolean createUserFolder(String username) {
+        String folderPath = getUserFolderPath(username);
+        File userFolder = new File(folderPath);
+        
+        if (userFolder.exists()) {
+            return true; // Folder already exists
+        }
+        
+        boolean created = userFolder.mkdirs();
+        if (!created) {
+            System.err.println("Failed to create user folder at: " + folderPath);
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public boolean storeUserData(String filename, String data) {
+        if (!isLoggedIn || currentUser.isEmpty()) {
+            return false;
+        }
+        
+        String userFolder = getCurrentUserFolderPath();
+        if (userFolder == null) {
+            return false;
+        }
+        
+        try {
+            File file = new File(userFolder + filename);
+            // Create parent directories if they don't exist
+            if (file.getParentFile() != null && !file.getParentFile().exists()) {
+                file.getParentFile().mkdirs();
+            }
+            
+            BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+            writer.write(data);
+            writer.close();
+            return true;
+            
+        } catch (IOException e) {
+            System.err.println("Error writing user data: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    public String retrieveUserData(String filename) {
+        if (!isLoggedIn || currentUser.isEmpty()) {
+            return null;
+        }
+        
+        String userFolder = getCurrentUserFolderPath();
+        if (userFolder == null) {
+            return null;
+        }
+        
+        try {
+            File file = new File(userFolder + filename);
+            if (!file.exists()) {
+                return null;
+            }
+            
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+            StringBuilder data = new StringBuilder();
+            String line;
+            
+            while ((line = reader.readLine()) != null) {
+                data.append(line).append("\n");
+            }
+            
+            reader.close();
+            return data.toString();
+        } catch (IOException e) {
+            System.err.println("Error reading user data: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    public String[] listUserFiles() {
+        if (!isLoggedIn || currentUser.isEmpty()) {
+            return null;
+        }
+        
+        String userFolder = getCurrentUserFolderPath();
+        if (userFolder == null) {
+            return null;
+        }
+        
+        File folder = new File(userFolder);
+        if (!folder.exists() || !folder.isDirectory()) {
+            return new String[0];
+        }
+        
+        return folder.list();
+    }
+    
     // It's fun to see the difference in the musicSingleton and this one because most of the code there
     // I did before some of our classes talking about communication and all those things
     // Now I'm just passing as a parameter instead of creating a field and passing it in every optionPane alert
@@ -107,6 +215,7 @@ public class AuthenticationSingleton {
                 // Login successful
                 this.currentUser = username;
                 this.isLoggedIn = true;
+                createUserFolder(username);
                 return true;
             } else {
                 // Password incorrect
@@ -180,5 +289,23 @@ public class AuthenticationSingleton {
             e.printStackTrace();
             return false;
         }
+    }
+    
+    public boolean deleteUserFile(String filename) {
+        if (!isLoggedIn || currentUser.isEmpty()) {
+            return false;
+        }
+        
+        String userFolder = getCurrentUserFolderPath();
+        if (userFolder == null) {
+            return false;
+        }
+        
+        File file = new File(userFolder + filename);
+        if (!file.exists()) {
+            return false;
+        }
+        
+        return file.delete();
     }
 }
