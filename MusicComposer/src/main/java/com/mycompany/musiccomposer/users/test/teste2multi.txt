@@ -1,0 +1,15 @@
+# Music Composition
+# Global Settings
+
+# Track: Track 1
+# Instrument: Piano
+# Tempo: 120
+# Muted: false
+Csus4 ➡ Csus4 ➡ Csus4 ➡ Csus4 ➡ Csus4 ➡ Csus4 ➡ Csus4
+
+# Track: test
+# Instrument: Violin
+# Tempo: 200
+# Muted: false
+Csus4 ➡ Csus4 ➡ Csus4 ➡ Csus4 ➡ Csus4 ➡ Csus4 ➡ Csus4
+

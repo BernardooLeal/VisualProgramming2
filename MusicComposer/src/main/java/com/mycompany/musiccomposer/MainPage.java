@@ -24,23 +24,37 @@ public class MainPage extends javax.swing.JFrame {
     public MainPage(String username) {
         initComponents();
         this.loggedInUser = username;
+        jTxtAChords.setEditable(false);
         jlblAccountName.setText(username);
         playerSingleton = MusicSingleton.getInstance();
         playerSingleton.setMainPage(this);
         refreshTrackSelector();
-        updateTrackDisplay(playerSingleton.getCurrentTrack());
+        
+        if (jCmbTrackSelector.getSelectedIndex() == 0) {
+            updateAllTracksDisplay();
+            setInstrumentControlsEnabled(false);
+            jBtnTempo.setEnabled(false);
+        } else {
+            updateTrackDisplay(playerSingleton.getCurrentTrack());
+            setInstrumentControlsEnabled(true);
+            jBtnTempo.setEnabled(true);
+        }
+        
         instrumentSelection(playerSingleton.getInstrument());
         playbackControlsState(MusicSingleton.STATUS_IDLE);
     }
     
+    public void updateTempoDisplay(int tempo) {
+        jBtnTempo.setText("Tempo: " + tempo);
+    }
+    
     public void updateTrackDisplay(Track track) {
-        // Update the text area with current track's chords
+        // Update the text area with current track info
         updateTextArea(String.join(" ", track.getRecordedChords()));
 
-        // Update instrument selection
         instrumentSelection(track.getInstrument());
+        updateTempoDisplay(track.getTempo());
 
-        // Update mute button status
         if (jTBtnMuteTrack != null) {
             jTBtnMuteTrack.setSelected(track.isMuted());
             jTBtnMuteTrack.setText(track.isMuted() ? "Unmute" : "Mute Track");
@@ -50,18 +64,29 @@ public class MainPage extends javax.swing.JFrame {
     // Low key chatGPT helped me on setting the combo box
     public void refreshTrackSelector() {
         if (jCmbTrackSelector != null) {
+            int previousSelection = jCmbTrackSelector.getSelectedIndex();
             jCmbTrackSelector.removeAllItems();
             jCmbTrackSelector.addItem("All Tracks"); 
             Map<Integer, Track> tracks = playerSingleton.getAllTracks();
             for (Map.Entry<Integer, Track> entry : tracks.entrySet()) {
                 jCmbTrackSelector.addItem(entry.getValue().getName() + (entry.getValue().isMuted() ? " (Muted)" : ""));
             }
-            // Set selection to current track or "All Tracks" if that was previously selected
-            if (jCmbTrackSelector.getSelectedItem() != null && 
-                jCmbTrackSelector.getSelectedItem().toString().equals("All Tracks")) {
-                jCmbTrackSelector.setSelectedIndex(0);
+            // Restore previous selection if possible
+            if (previousSelection >= 0 && previousSelection < jCmbTrackSelector.getItemCount()) {
+                jCmbTrackSelector.setSelectedIndex(previousSelection);
             } else {
-                jCmbTrackSelector.setSelectedIndex(playerSingleton.getCurrentTrackIndex() + 1); // +1 because "All Tracks" is at index 0
+                // Default to the current track + 1 (to account for "All Tracks")
+                jCmbTrackSelector.setSelectedIndex(playerSingleton.getCurrentTrackIndex() + 1);
+            }
+
+            // Explicitly update display based on current selection
+            if (jCmbTrackSelector.getSelectedIndex() == 0) {
+                updateAllTracksDisplay();
+                setInstrumentControlsEnabled(false);
+            } else {
+                int trackIndex = jCmbTrackSelector.getSelectedIndex() - 1;
+                updateTrackDisplay(playerSingleton.getTrack(trackIndex));
+                setInstrumentControlsEnabled(true);
             }
         }
     }
@@ -83,14 +108,27 @@ public class MainPage extends javax.swing.JFrame {
         StringBuilder allTracks = new StringBuilder();
         Map<Integer, Track> tracks = playerSingleton.getAllTracks();
 
+        if (tracks.isEmpty()) {
+            updateTextArea("No tracks available.");
+            return;
+        }
+
         for (Map.Entry<Integer, Track> entry : tracks.entrySet()) {
             Track track = entry.getValue();
-            allTracks.append("Track ").append(entry.getKey()).append(": ")
+            allTracks.append("Track ").append(entry.getKey() + 1).append(": ")
                     .append(track.getName())
                     .append(track.isMuted() ? " (Muted)" : "")
                     .append("\n");
             allTracks.append("Instrument: ").append(track.getInstrument()).append("\n");
-            allTracks.append(String.join(" ", track.getRecordedChords())).append("\n\n");
+            allTracks.append("Tempo: ").append(track.getTempo()).append("\n");
+
+            List<String> chords = track.getRecordedChords();
+            if (chords.isEmpty()) {
+                allTracks.append("No chords recorded\n");
+            } else {
+                allTracks.append(String.join(" ", chords)).append("\n");
+            }
+            allTracks.append("\n");
         }
 
         updateTextArea(allTracks.toString());
@@ -117,6 +155,14 @@ public class MainPage extends javax.swing.JFrame {
                 jRBtnPiano.setSelected(true);
                 break;
         }
+    }
+    
+    private void setInstrumentControlsEnabled(boolean enabled) {
+        jRBtnPiano.setEnabled(enabled);
+        jRBtnGuitar.setEnabled(enabled);
+        jRBtnViolin.setEnabled(enabled);
+        jRBtnFlute.setEnabled(enabled);
+        jRBtnTrumpet.setEnabled(enabled);
     }
     
     public void playbackControlsState(String status) {
@@ -649,7 +695,9 @@ public class MainPage extends javax.swing.JFrame {
     }//GEN-LAST:event_jTBtnRecordActionPerformed
 
     private void jBtnTempoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBtnTempoActionPerformed
-        playerSingleton.setTempo(playerSingleton.getTempo());
+        playerSingleton.setTempo();
+        updateTempoDisplay(playerSingleton.getTempo());
+        
     }//GEN-LAST:event_jBtnTempoActionPerformed
 
     private void jRBtnPianoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jRBtnPianoActionPerformed
@@ -697,6 +745,7 @@ public class MainPage extends javax.swing.JFrame {
     private void jBtnImportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jBtnImportActionPerformed
         // TODO add your handling code here:
         playerSingleton.loadComposition();
+        updateTrackDisplay(playerSingleton.getCurrentTrack());
     }//GEN-LAST:event_jBtnImportActionPerformed
 
     private void jCmbTrackSelectorActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCmbTrackSelectorActionPerformed
@@ -709,14 +758,22 @@ public class MainPage extends javax.swing.JFrame {
             jBtnRenameTrack.setEnabled(false);
             jBtnDeleteTrack.setEnabled(false);
             jTBtnRecord.setEnabled(false);
+            setInstrumentControlsEnabled(false);
+            jBtnTempo.setEnabled(false);
         } else {
             // Regular track selected
-            playerSingleton.switchTrack(selectedIndex - 1); // -1 because "All Tracks" is at index 0
-            updateTrackDisplay(playerSingleton.getCurrentTrack());
+            int trackIndex = selectedIndex - 1; // -1 because "All Tracks" is at index 0
+            playerSingleton.switchTrack(trackIndex); 
+            Track currentTrack = playerSingleton.getTrack(trackIndex);
+            if (currentTrack != null) {
+                updateTrackDisplay(currentTrack);
+            }
             jTBtnMuteTrack.setEnabled(true);
             jBtnRenameTrack.setEnabled(true);
             jBtnDeleteTrack.setEnabled(true);
             jTBtnRecord.setEnabled(true);
+            setInstrumentControlsEnabled(true);
+            jBtnTempo.setEnabled(true);
         }
     }//GEN-LAST:event_jCmbTrackSelectorActionPerformed
 
@@ -728,6 +785,7 @@ public class MainPage extends javax.swing.JFrame {
             int newIndex = playerSingleton.createTrack(name, instrument);
             playerSingleton.switchTrack(newIndex);
             refreshTrackSelector();
+            jCmbTrackSelector.setSelectedIndex(newIndex + 1); // +1 because "All Tracks" is at index 0
             updateTrackDisplay(playerSingleton.getCurrentTrack());
         }
     }//GEN-LAST:event_jBtnAddTrackActionPerformed

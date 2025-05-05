@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JOptionPane;
 import java.lang.Thread;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,7 +24,7 @@ public class MusicSingleton {
     
     private static MusicSingleton instance;
     private Player player;
-    private List<String> recordedChords;
+    //private List<String> recordedChords;
     private boolean isRecording;
     private int tempo;
     private String instrument;
@@ -45,7 +46,7 @@ public class MusicSingleton {
     
     private MusicSingleton() {
         this.player = new Player();
-        this.recordedChords = new ArrayList<>();
+        //this.recordedChords = new ArrayList<>();
         this.tracks = new HashMap<>();
         this.isRecording = false;
         this.tempo = 120;
@@ -110,7 +111,7 @@ public class MusicSingleton {
     
     public void playChord(String chord) {
         Track currentTrack = getCurrentTrack();
-        new Thread(() -> player.play("T" + tempo + " I[" + currentTrack.getInstrument() + "] " + chord)).start(); //crazy API syntax 
+        new Thread(() -> player.play("T" + currentTrack.getTempo() + " I[" + currentTrack.getInstrument() + "] " + chord)).start(); //crazy API syntax 
         
         if (isRecording) {
             currentTrack.addChord(chord);
@@ -157,6 +158,7 @@ public class MusicSingleton {
             try {
                 List<String> chords = currentTrack.getRecordedChords();
                 String trackInstrument = currentTrack.getInstrument();
+                int trackTempo = currentTrack.getTempo();
                 
                 for (int i = 0; i < chords.size(); i++) {
                     String chord = chords.get(i);
@@ -172,12 +174,11 @@ public class MusicSingleton {
 
                     // Update current chord index
                     currentChordIndex = i;
-                    
-                    // highlight current chord
+                   
                     mainPage.highlightCurrentChord(i);
                     
                     
-                    player.play("T" + tempo + " I[" + trackInstrument + "] " + chord);
+                    player.play("T" + trackTempo + " I[" + trackInstrument + "] " + chord);
                     
                     if (!isListeningMode) {
                         Thread.sleep(1000); //the time spent in each chord
@@ -203,10 +204,13 @@ public class MusicSingleton {
     public void playMultiRecordedChords() {
         // Check if we have any tracks with chords
         boolean hasChords = false;
-        for (Track track : tracks.values()) {
-            if (!track.getRecordedChords().isEmpty()) {
+        Map<Integer, Track> tracksToPlay = new HashMap<>();
+        
+        for (Map.Entry<Integer, Track> entry : tracks.entrySet()) {
+            Track track = entry.getValue();
+            if (!track.getRecordedChords().isEmpty() && !track.isMuted()) {
                 hasChords = true;
-                break;
+                tracksToPlay.put(entry.getKey(), track);
             }
         }
         
@@ -226,34 +230,50 @@ public class MusicSingleton {
         mainPage.playbackControlsState(STATUS_PLAYING);
 
         playbackThread = new Thread(() -> {
-            // Multi-track playback, used chat for appends
-            StringBuilder pattern = new StringBuilder();
-            pattern.append("T").append(tempo).append(" ");
+            try {
+                // I found out that JFugue's Player class wasn't designed to have multiple instances playing simultaneously
+                // In JFugue, we can use different voice channels (V0, V1, etc.) for different tracks (low key took ages to discover it)
+                StringBuilder masterPattern = new StringBuilder();
 
-            int trackCount = 0;
-            for (Map.Entry<Integer, Track> entry : tracks.entrySet()) {
-                Track track = entry.getValue();
-                if (track.getRecordedChords().isEmpty() || track.isMuted()) {
-                    continue;
+                int voiceNum = 0;
+                for (Track track : tracksToPlay.values()) {
+                    if (track.getRecordedChords().isEmpty() || track.isMuted()) {
+                        continue;
+                    }
+
+                    // Add this track as a separate voice in the master pattern
+                    masterPattern.append("V").append(voiceNum).append(" ");
+                    masterPattern.append("T").append(track.getTempo()).append(" ");
+                    masterPattern.append("I[").append(track.getInstrument()).append("] ");
+
+                    for (String chord : track.getRecordedChords()) {
+                        masterPattern.append(chord).append(" ");
+                    }
+
+                    masterPattern.append(" ");
+                    voiceNum++;
                 }
 
-                pattern.append("V").append(trackCount).append(" ");
-                pattern.append("I[").append(track.getInstrument()).append("] ");
-                for (String chord : track.getRecordedChords()) {
-                    pattern.append(chord).append(" ");
+                // Create a single player for the master pattern
+                if (masterPattern.length() > 0) {
+                    final String finalPattern = masterPattern.toString();
+
+                    // Play the combined pattern
+                    try {
+                        Player player = new Player();
+                        player.play(finalPattern);
+                        mainPage.playbackControlsState(STATUS_IDLE);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        mainPage.playbackControlsState(STATUS_IDLE);
+                    }
                 }
-                pattern.append(" ");
-                trackCount++;
+            } catch (Exception e) {
+                e.printStackTrace();
+                mainPage.playbackControlsState(STATUS_IDLE);
             }
-
-            if (trackCount > 0) {
-                Player localPlayer = new Player();
-                localPlayer.play(pattern.toString());
-            }
-
-            mainPage.playbackControlsState(STATUS_IDLE);
-            currentChordIndex = -1;
         });
+
         playbackThread.start();
     }
     
@@ -308,7 +328,7 @@ public class MusicSingleton {
                 try {
                     Thread.sleep(100);
                     Track currentTrack = getCurrentTrack();
-                    mainPage.updateTextArea(String.join("", recordedChords));
+                    mainPage.updateTextArea(String.join("", currentTrack.getRecordedChords()));
                     
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -344,12 +364,13 @@ public class MusicSingleton {
         return currentChordIndex;
     }
     
-    public void setTempo(int tempo) {
-        String newTempo = JOptionPane.showInputDialog("Enter new tempo:");
+    public void setTempo() {
+        String newTempo = JOptionPane.showInputDialog("Enter new tempo:", getCurrentTrack().getTempo());
         try {
-            tempo = Integer.parseInt(newTempo);
+            int newTempoValue = Integer.parseInt(newTempo); //just double checking
+            getCurrentTrack().setTempo(newTempoValue);
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(mainPage,"Invalid tempo input!");
+            JOptionPane.showMessageDialog(mainPage, "Invalid tempo input!");
         }
     }
     
@@ -362,54 +383,54 @@ public class MusicSingleton {
     }
 
     public int getTempo() {
-        return tempo;
+        return getCurrentTrack().getTempo();
     }
     
-    // Either the loading doesn't load more than 1 track, or it is saving wrong
     public void saveComposition(String composition) {
-        if (composition == null || composition.isEmpty()) {
-            JOptionPane.showMessageDialog(mainPage, "No composition to save.");
-            return;
-        }
-        
         // Get the authentication singleton to access user folder
         AuthenticationSingleton auth = AuthenticationSingleton.getInstance();
-        
+
         if (!auth.isLoggedIn()) {
             JOptionPane.showMessageDialog(mainPage, "You must be logged in to save compositions.", 
                     "Login Required", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         String fileName = JOptionPane.showInputDialog(mainPage, 
                 "Enter a name for your composition:", 
                 "Save Composition", 
                 JOptionPane.QUESTION_MESSAGE);
-                
+
         if (fileName == null || fileName.trim().isEmpty()) {
-            return; // User canceled or entered empty name
+            return; 
         }
-        
+
         if (!fileName.toLowerCase().endsWith(".txt")) {
             fileName += ".txt";
         }
-        
+
         try {
             StringBuilder content = new StringBuilder();
             content.append("# Music Composition\n");
-            content.append("# Tempo: ").append(tempo).append("\n\n");
-            
-            // Save each track separately
+            content.append("# Number of Tracks: ").append(tracks.size()).append("\n\n");
+
+            // Save each track with nice markers suggestions that Chat gave me
             for (Map.Entry<Integer, Track> entry : tracks.entrySet()) {
+                int trackIndex = entry.getKey();
                 Track track = entry.getValue();
-                content.append("# Track: ").append(track.getName()).append("\n");
-                content.append("# Instrument: ").append(track.getInstrument()).append("\n");
-                content.append("# Muted: ").append(track.isMuted()).append("\n");
-                content.append(String.join(" ", track.getRecordedChords())).append("\n\n");
+
+                // Use clear section markers for each track
+                content.append("## TRACK_START ").append(trackIndex).append("\n");
+                content.append("NAME: ").append(track.getName()).append("\n");
+                content.append("INSTRUMENT: ").append(track.getInstrument()).append("\n");
+                content.append("TEMPO: ").append(track.getTempo()).append("\n");
+                content.append("MUTED: ").append(track.isMuted()).append("\n");
+                content.append("CHORDS: ").append(String.join(" ", track.getRecordedChords())).append("\n");
+                content.append("## TRACK_END ").append(trackIndex).append("\n\n");
             }
-            
+
             boolean saved = auth.storeUserData(fileName, content.toString());
-            
+
             if (saved) {
                 JOptionPane.showMessageDialog(mainPage, 
                         "Composition saved successfully as " + fileName + " in your account.", 
@@ -429,14 +450,15 @@ public class MusicSingleton {
         }
     }
     
-    //not working when there are more than 1 track / or the problem is in the saving. Layout on the track area was giving by chat
-    public String loadComposition() {
+    //The loadComposition for more than 1 track was heavily influenced by AI
+    //The multi tracking destroyed me so most of the structure for the method was based on Chat (between line 495 and 621)
+    //I even commented to help the understanding but this method in specific didn't came from my mind 
+    public void loadComposition() {
         AuthenticationSingleton auth = AuthenticationSingleton.getInstance();
 
         if (!auth.isLoggedIn()) {
             JOptionPane.showMessageDialog(mainPage, "You must be logged in to load compositions.", 
                     "Login Required", JOptionPane.WARNING_MESSAGE);
-            return null;
         }
 
         String[] files = auth.listUserFiles();
@@ -444,9 +466,9 @@ public class MusicSingleton {
         if (files == null || files.length == 0) {
             JOptionPane.showMessageDialog(mainPage, "No saved compositions found.", 
                     "No Files", JOptionPane.INFORMATION_MESSAGE);
-            return null;
         }
-        //if for some reason the files are not txt
+
+        // Filter for txt files
         List<String> txtFiles = new ArrayList<>();
         for (String file : files) {
             if (file.toLowerCase().endsWith(".txt")) {
@@ -457,7 +479,6 @@ public class MusicSingleton {
         if (txtFiles.isEmpty()) {
             JOptionPane.showMessageDialog(mainPage, "No saved compositions found.", 
                     "No Files", JOptionPane.INFORMATION_MESSAGE);
-            return null;
         }
 
         String selectedFile = (String) JOptionPane.showInputDialog(
@@ -469,116 +490,162 @@ public class MusicSingleton {
                 txtFiles.toArray(),
                 txtFiles.get(0));
 
-        if (selectedFile == null) {
-            return null; // User canceled
-        }
 
         String composition = auth.retrieveUserData(selectedFile);
 
         if (composition != null) {
-            JOptionPane.showMessageDialog(mainPage, 
-                    "Composition loaded successfully.", 
-                    "Load Successful", 
-                    JOptionPane.INFORMATION_MESSAGE);
-
-            tracks.clear();
-
-            //track
             try {
-                    BufferedReader reader = new BufferedReader(new java.io.StringReader(composition));
-                    String line;
-                    StringBuilder trackContent = new StringBuilder();
-                    String trackName = "Track 1";
-                    String trackInstrument = "Piano";
-                    boolean trackMuted = false;
-                    int trackIndex = 0;
+                // Clear existing tracks before loading
+                tracks.clear();
 
-                    while ((line = reader.readLine()) != null) {
-                        if (line.startsWith("# Tempo:")) {
-                            int tempoValue = Integer.parseInt(line.substring("# Tempo:".length()).trim());
-                            this.tempo = tempoValue;
-                        } else if (line.startsWith("# Track:")) {
-                            // If we have a previous track to save
-                            if (trackContent.length() > 0) {
-                                Track track = new Track(trackName, trackInstrument);
-                                track.setMuted(trackMuted);
+                BufferedReader reader = new BufferedReader(new java.io.StringReader(composition));
+                String line;
 
-                                // Add chords to track
-                                String[] chordsArray = trackContent.toString().trim().split("\\s+");
-                                for (String chord : chordsArray) {
-                                    if (!chord.isEmpty()) {
-                                        track.addChord(chord);
-                                    }
+                boolean insideTrack = false;
+                int currentTrackIndex = -1;
+                String trackName = "";
+                String trackInstrument = "Piano";
+                int trackTempo = 120;
+                boolean trackMuted = false;
+                List<String> trackChords = new ArrayList<>();
+
+                while ((line = reader.readLine()) != null) {
+
+                    // Check for track section markers
+                    if (line.startsWith("## TRACK_START")) {
+                        insideTrack = true;
+                        trackName = "";
+                        trackInstrument = "Piano";
+                        trackTempo = 120;
+                        trackMuted = false;
+                        trackChords.clear();
+
+                        // Extract track index if available
+                        try {
+                            String indexStr = line.substring("## TRACK_START".length()).trim();
+                            currentTrackIndex = Integer.parseInt(indexStr);
+                        } catch (Exception e) {
+                            currentTrackIndex = tracks.size(); // Use next available index
+                        }
+                    }
+
+                    if (line.startsWith("## TRACK_END")) {
+                        if (insideTrack) {
+                            // Create and add the track
+                            Track track = new Track(trackName, trackInstrument);
+                            track.setTempo(trackTempo);
+                            track.setMuted(trackMuted);
+
+                            // Add all chords to the track
+                            for (String chord : trackChords) {
+                                if (!chord.isEmpty()) {
+                                    track.addChord(chord);
                                 }
-
-                                tracks.put(trackIndex, track);
-                                trackIndex++;
-                                trackContent = new StringBuilder();
                             }
 
-                            trackName = line.substring("# Track:".length()).trim();
-                        } else if (line.startsWith("# Instrument:")) {
-                            trackInstrument = line.substring("# Instrument:".length()).trim();
+                            // Add track to tracks map
+                            tracks.put(currentTrackIndex, track);
+                            insideTrack = false;
+                        }
+                    }
+
+                    // Parse track properties
+                    if (insideTrack) {
+                        if (line.startsWith("NAME:")) {
+                            trackName = line.substring("NAME:".length()).trim();
+                            if (trackName.isEmpty()) {
+                                trackName = "Track " + (currentTrackIndex + 1);
+                            }
+                        } else if (line.startsWith("INSTRUMENT:")) {
+                            trackInstrument = line.substring("INSTRUMENT:".length()).trim();
                             if (trackInstrument.isEmpty()) {
                                 trackInstrument = "Piano";
                             }
-                        } else if (line.startsWith("# Muted:")) {
-                            trackMuted = Boolean.parseBoolean(line.substring("# Muted:".length()).trim());
-                        } else if (!line.isEmpty() && !line.startsWith("#")) {
-                            trackContent.append(line).append(" ");
-                        }
-                    }
-
-                    // Add the last track if there is one
-                    if (trackContent.length() > 0) {
-                        Track track = new Track(trackName, trackInstrument);
-                        track.setMuted(trackMuted);
-
-                        // Add chords to track
-                        String[] chordsArray = trackContent.toString().trim().split("\\s+");
-                        for (String chord : chordsArray) {
-                            if (!chord.isEmpty()) {
-                                track.addChord(chord);
+                        } else if (line.startsWith("TEMPO:")) {
+                            try {
+                                trackTempo = Integer.parseInt(line.substring("TEMPO:".length()).trim());
+                            } catch (NumberFormatException e) {
+                                trackTempo = 120; 
+                            }
+                        } else if (line.startsWith("MUTED:")) {
+                            trackMuted = Boolean.parseBoolean(line.substring("MUTED:".length()).trim());
+                        } else if (line.startsWith("CHORDS:")) {
+                            String chordsLine = line.substring("CHORDS:".length()).trim();
+                            if (!chordsLine.isEmpty()) {
+                                String[] chordsArray = chordsLine.split("\\s+");
+                                trackChords.addAll(Arrays.asList(chordsArray));
                             }
                         }
-
-                        tracks.put(trackIndex, track);
+                    } else {
+                        // Handle old format files or unknown format
+                        // Try to extract chords as a fallback
+                        if (!line.startsWith("#") && !line.contains(":")) {
+                            String[] oldFormatChords = line.trim().split("\\s+");
+                            if (oldFormatChords.length > 0) {
+                                if (tracks.isEmpty()) {
+                                    // Create a default track for old format files
+                                    Track defaultTrack = new Track("Imported Track", "Piano");
+                                    for (String chord : oldFormatChords) {
+                                        if (!chord.isEmpty()) {
+                                            defaultTrack.addChord(chord);
+                                        }
+                                    }
+                                    tracks.put(0, defaultTrack);
+                                }
+                            }
+                        }
                     }
-
-                    // If no tracks were loaded, create a default one
-                    if (tracks.isEmpty()) {
-                        createTrack("Track 1", "Piano");
-                    }
-
-                    // Set current track to first one
-                    currentTrackIndex = 0;
-
-                    mainPage.updateTrackDisplay(getCurrentTrack());
-                    mainPage.updateTextArea(String.join(" ", getCurrentTrack().getRecordedChords()));
-                    mainPage.instrumentSelection(getCurrentTrack().getInstrument());
-
-                    return composition;
-
-                } catch (IOException e) {
-                    // If there's an error parsing, create a default track
-                    tracks.clear();
-                    createTrack("Track 1", "Piano");
-                    currentTrackIndex = 0;
-
-                    JOptionPane.showMessageDialog(mainPage, 
-                            "Error parsing composition file. Created a default track.", 
-                            "Parse Error", 
-                            JOptionPane.WARNING_MESSAGE);
-
-                    return composition;
                 }
-            } else {
+
+                // Handle case where file ends while still inside a track
+                if (insideTrack) {
+                    Track track = new Track(trackName, trackInstrument);
+                    track.setTempo(trackTempo);
+                    track.setMuted(trackMuted);
+
+                    for (String chord : trackChords) {
+                        if (!chord.isEmpty()) {
+                            track.addChord(chord);
+                        }
+                    }
+
+                    tracks.put(currentTrackIndex, track);
+                }
+
+                // If no tracks were loaded, create a default one
+                if (tracks.isEmpty()) {
+                    createTrack("Track 1", "Piano");
+                }
+
+                // Set current track to first one
+                currentTrackIndex = tracks.keySet().iterator().next();
+
+                mainPage.refreshTrackSelector();
+                mainPage.updateTrackDisplay(getCurrentTrack());
+
                 JOptionPane.showMessageDialog(mainPage, 
-                        "Error loading composition.", 
-                        "Load Error", 
-                        JOptionPane.ERROR_MESSAGE);
-                return null;
+                        "Composition loaded successfully.", 
+                        "Load Successful", 
+                        JOptionPane.INFORMATION_MESSAGE);
+
+            } catch (IOException e) {
+                // If there's an error parsing, create a default track
+                tracks.clear();
+                createTrack("Track 1", "Piano");
+                currentTrackIndex = 0;
+
+                JOptionPane.showMessageDialog(mainPage, 
+                        "Error parsing composition file. Created a default track.", 
+                        "Parse Error", 
+                        JOptionPane.WARNING_MESSAGE);
+
             }
+        } else {
+            JOptionPane.showMessageDialog(mainPage, 
+                    "Error loading composition.", 
+                    "Load Error", 
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
     
     public void muteTrack(int trackIndex) {

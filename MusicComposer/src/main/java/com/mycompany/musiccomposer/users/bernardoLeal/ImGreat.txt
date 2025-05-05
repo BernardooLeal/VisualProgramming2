@@ -1,0 +1,19 @@
+# Music Composition
+# Number of Tracks: 2
+
+## TRACK_START 0
+NAME: Track 1
+INSTRUMENT: Trumpet
+TEMPO: 120
+MUTED: false
+CHORDS: Csus2 ➡ Caug ➡ Cdim ➡ Cmin ➡ Cmaj
+## TRACK_END 0
+
+## TRACK_START 1
+NAME: re
+INSTRUMENT: Guitar
+TEMPO: 200
+MUTED: false
+CHORDS: Csus4 ➡ Csus2 ➡ Csus4 ➡ Csus2 ➡ Csus4
+## TRACK_END 1
+

@@ -1,0 +1,27 @@
+# Music Composition File Format v1.0
+# Number of Tracks: 3
+
+## TRACK_START 0
+NAME: Track 1
+INSTRUMENT: Piano
+TEMPO: 120
+MUTED: false
+CHORDS: 
+## TRACK_END 0
+
+## TRACK_START 1
+NAME: a
+INSTRUMENT: Piano
+TEMPO: 120
+MUTED: false
+CHORDS: Csus2 ➡ Csus2 ➡ Csus2 ➡ Csus2
+## TRACK_END 1
+
+## TRACK_START 2
+NAME: r
+INSTRUMENT: Piano
+TEMPO: 120
+MUTED: false
+CHORDS: Cdim ➡ Cmin
+## TRACK_END 2
+

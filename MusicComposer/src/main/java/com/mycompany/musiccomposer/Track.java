@@ -16,12 +16,22 @@ public class Track {
     private List<String> recordedChords;
     private String name;
     private boolean isMuted;
+    private int tempo; // Add this field
     
     public Track(String name, String instrument) {
         this.name = name;
         this.instrument = instrument;
         this.recordedChords = new ArrayList<>();
         this.isMuted = false;
+        this.tempo = 120;
+    }
+    
+    public int getTempo() {
+        return tempo;
+    }
+    
+    public void setTempo(int tempo) {
+        this.tempo = tempo;
     }
     
     public String getName() {
